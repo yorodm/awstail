@@ -1,0 +1,12 @@
+[package]
+name = "awstail"
+version = "0.1.0"
+authors = ["Yoandy Rodriguez <yoandy.rmartinez@gmail.com>"]
+
+[dependencies]
+rusoto_core = "0.34.0"
+rusoto_logs ="0.34.0"
+clap = "2.32.0"
+chrono ="0.4.6"
+humantime = "1.1.1"
+console ="0.6.2"
