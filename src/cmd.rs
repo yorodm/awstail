@@ -34,7 +34,7 @@ fn print_date(time: Option<i64>) -> String {
             .format("%Y-%m-%d %H:%M:%S")
             .to_string()
             .to_owned(),
-        None => "".to_owned(),
+        None => "".to_owned()
     }
 }
 
@@ -50,7 +50,7 @@ fn fetch_logs(region: Region, group: &str, since: Duration) -> Result<(), String
         println!(
             "{} {} {}",
             print_date(event.timestamp),
-            event.message.unwrap(),
+            event.message.unwrap().trim(),
             Local::now().to_rfc3339()
         );
         println!("-----------------------------------------------");
