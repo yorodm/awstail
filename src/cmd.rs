@@ -13,7 +13,7 @@ fn calculate_start_time(from: DateTime<Local>, delta: Duration) -> Option<i64> {
     let start_time = from.checked_sub_signed(chrono_delta).unwrap();
     // Amazon uses time in UTC so we have to convert
     let utc_time = DateTime::<Utc>::from_utc(start_time.naive_utc(), Utc);
-    return Some(utc_time.timestamp());
+    return Some(utc_time.timestamp() * 1000);
 }
 
 fn create_filter_request(
@@ -70,7 +70,7 @@ mod tests {
         let duration = parse_duration("1d").unwrap();
         assert_eq!(
             calculate_start_time(local, duration).unwrap(),
-            (local - Duration::days(1)).timestamp()
+            (local - Duration::days(1)).timestamp() * 1000
         )
     }
 }
