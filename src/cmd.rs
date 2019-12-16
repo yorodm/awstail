@@ -43,8 +43,12 @@ fn fetch_logs(
     req: FilterLogEventsRequest,
     timeout: Duration,
 ) -> Option<String> {
-    let logs = client.filter_log_events(req).sync().unwrap();
-    let events = logs.events.unwrap();
+    let response = client
+        .filter_log_events(req)
+        .with_timeout(timeout)
+        .sync()
+        .unwrap();
+    let events = response.events.unwrap();
     for event in events.into_iter() {
         println!(
             "{} {} {}",
@@ -53,7 +57,7 @@ fn fetch_logs(
             Local::now().to_rfc3339()
         );
     }
-    return logs.next_token;
+    return response.next_token;
 }
 
 #[cfg(test)]
