@@ -2,7 +2,7 @@
 name = "awstail"
 version = "0.1.0"
 authors = ["Yoandy Rodriguez <yoandy.rmartinez@gmail.com>"]
-
+edition = '2018'
 [dependencies]
 rusoto_core = "0.34.0"
 rusoto_logs ="0.34.0"

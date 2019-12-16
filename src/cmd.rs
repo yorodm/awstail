@@ -18,11 +18,12 @@ fn calculate_start_time(from: DateTime<Local>, delta: Duration) -> Option<i64> {
 
 fn create_filter_request(
     group: &str,
-    start: Option<i64>,
+    start: Duration,
     token: Option<String>,
 ) -> FilterLogEventsRequest {
     let mut req = FilterLogEventsRequest::default();
-    req.start_time = start;
+    let delta = calculate_start_time(Local::now(), start);
+    req.start_time = delta;
     req.next_token = token;
     req.log_group_name = group.to_string();
     return req;
@@ -32,30 +33,27 @@ fn print_date(time: Option<i64>) -> String {
     match time {
         Some(x) => NaiveDateTime::from_timestamp(x / 1000, 0)
             .format("%Y-%m-%d %H:%M:%S")
-            .to_string()
-            .to_owned(),
-        None => "".to_owned()
+            .to_string(),
+        None => "".to_owned(),
     }
 }
 
-fn fetch_logs(region: Region, group: &str, since: Duration) -> Result<(), String> {
-    let client = CloudWatchLogsClient::new(region);
-    let delta = calculate_start_time(Local::now(), since);
-    let req = create_filter_request(group, delta, None);
-    // right now
+fn fetch_logs(
+    client: &CloudWatchLogsClient,
+    req: FilterLogEventsRequest,
+    timeout: Duration,
+) -> Option<String> {
     let logs = client.filter_log_events(req).sync().unwrap();
     let events = logs.events.unwrap();
     for event in events.into_iter() {
-        println!("-----------------------------------------------");
         println!(
             "{} {} {}",
             print_date(event.timestamp),
             event.message.unwrap().trim(),
             Local::now().to_rfc3339()
         );
-        println!("-----------------------------------------------");
     }
-    return Ok(());
+    return logs.next_token;
 }
 
 #[cfg(test)]
@@ -81,9 +79,23 @@ pub fn run(matches: ArgMatches) -> Result<(), String> {
         Some(m) => parse_duration(m),
         None => parse_duration("5m"),
     };
+    let timeout = match matches.value_of("timeout") {
+        Some(m) => parse_duration(m),
+        None => parse_duration("30s"),
+    };
     let region = match matches.value_of("region") {
         Some(m) => Region::from_str(m),
         None => Ok(Region::UsEast1),
     };
-    return fetch_logs(region.unwrap(), group, mtime.unwrap());
+    let mut token: Option<String> = None;
+    let mut req = create_filter_request(group, mtime.unwrap(), token);
+    let client = CloudWatchLogsClient::new(region.unwrap());
+    loop {
+        match fetch_logs(&client, req, timeout.unwrap()) {
+            Some(x) => token = Some(x),
+            None => break,
+        };
+        req = create_filter_request(group, mtime.unwrap(), token);
+    }
+    Ok(())
 }
