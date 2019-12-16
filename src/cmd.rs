@@ -1,12 +1,11 @@
 use chrono::Duration as Delta;
 use chrono::{DateTime, Local, NaiveDateTime, Utc};
 use clap::ArgMatches;
+use console::Style;
 use humantime::parse_duration;
 use rusoto_core::HttpClient;
 use rusoto_core::Region;
-use rusoto_credential::{
-    AutoRefreshingProvider, ChainProvider, DefaultCredentialsProvider, ProfileProvider,
-};
+use rusoto_credential::{AutoRefreshingProvider, ChainProvider, ProfileProvider};
 use rusoto_logs::{CloudWatchLogs, CloudWatchLogsClient, FilterLogEventsRequest};
 use std::result::Result;
 use std::str::FromStr;
@@ -35,7 +34,7 @@ fn create_filter_request(
 
 fn print_date(time: Option<i64>) -> String {
     match time {
-        Some(x) => NaiveDateTime::from_timestamp(x / 1000, 0)
+        Some(x) => DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(x / 1000, 0), Utc)
             .format("%Y-%m-%d %H:%M:%S")
             .to_string(),
         None => "".to_owned(),
@@ -53,12 +52,12 @@ fn fetch_logs(
         .sync()
         .unwrap();
     let events = response.events.unwrap();
+    let green = Style::new().green();
     for event in events.into_iter() {
         println!(
-            "{} {} {}",
-            print_date(event.timestamp),
+            "{} {}",
+            green.apply_to(print_date(event.timestamp)),
             event.message.unwrap().trim(),
-            Local::now().to_rfc3339()
         );
     }
     return response.next_token;
