@@ -24,6 +24,13 @@ fn main() {
                 .help("AWS region (defaults to us-east-1)"),
         )
         .arg(
+            Arg::with_name("profile")
+                .short("p")
+                .required(false)
+                .value_name("PROFILE")
+                .help("Profile if using other than 'default'"),
+        )
+        .arg(
             Arg::with_name("since")
                 .short("s")
                 .required(false)

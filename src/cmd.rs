@@ -2,7 +2,11 @@ use chrono::Duration as Delta;
 use chrono::{DateTime, Local, NaiveDateTime, Utc};
 use clap::ArgMatches;
 use humantime::parse_duration;
+use rusoto_core::HttpClient;
 use rusoto_core::Region;
+use rusoto_credential::{
+    AutoRefreshingProvider, ChainProvider, DefaultCredentialsProvider, ProfileProvider,
+};
 use rusoto_logs::{CloudWatchLogs, CloudWatchLogsClient, FilterLogEventsRequest};
 use std::result::Result;
 use std::str::FromStr;
@@ -60,6 +64,14 @@ fn fetch_logs(
     return response.next_token;
 }
 
+pub fn client_with_profile(name: &str, region: Region) -> CloudWatchLogsClient {
+    let mut profile = ProfileProvider::new().unwrap();
+    profile.set_profile(name);
+    let chain = ChainProvider::with_profile_provider(profile);
+    let credentials = AutoRefreshingProvider::<ChainProvider>::new(chain).unwrap();
+    CloudWatchLogsClient::new_with(HttpClient::new().unwrap(), credentials, region)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -91,9 +103,13 @@ pub fn run(matches: ArgMatches) -> Result<(), String> {
         Some(m) => Region::from_str(m),
         None => Ok(Region::UsEast1),
     };
+    let client = match matches.value_of("profile") {
+        Some(m) => client_with_profile(m, region.unwrap()),
+        None => CloudWatchLogsClient::new(region.unwrap()),
+    };
     let mut token: Option<String> = None;
     let mut req = create_filter_request(group, mtime.unwrap(), token);
-    let client = CloudWatchLogsClient::new(region.unwrap());
+
     loop {
         match fetch_logs(&client, req, timeout.unwrap()) {
             Some(x) => token = Some(x),
