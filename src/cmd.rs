@@ -4,14 +4,16 @@ use clap::ArgMatches;
 use humantime::parse_duration;
 use rusoto_core::HttpClient;
 use rusoto_core::Region;
-use rusoto_credential::{
-    AutoRefreshingProvider, ChainProvider, DefaultCredentialsProvider, ProfileProvider,
-};
-use rusoto_logs::{CloudWatchLogs, CloudWatchLogsClient, FilterLogEventsRequest};
+use rusoto_credential::{AutoRefreshingProvider, ChainProvider, ProfileProvider};
+use rusoto_logs::{CloudWatchLogs, CloudWatchLogsClient, FilterLogEventsRequest, FilteredLogEvent};
 use std::result::Result;
 use std::str::FromStr;
 use std::time::Duration;
 
+enum LogsResponse {
+    Token(String),
+    Time(i64),
+}
 fn calculate_start_time(from: DateTime<Local>, delta: Duration) -> Option<i64> {
     let chrono_delta = Delta::from_std(delta).unwrap();
     let start_time = from.checked_sub_signed(chrono_delta).unwrap();
@@ -46,7 +48,7 @@ fn fetch_logs(
     client: &CloudWatchLogsClient,
     req: FilterLogEventsRequest,
     timeout: Duration,
-) -> Option<String> {
+) -> LogsResponse {
     let response = client
         .filter_log_events(req)
         .with_timeout(timeout)
@@ -61,7 +63,21 @@ fn fetch_logs(
             Local::now().to_rfc3339()
         );
     }
-    return response.next_token;
+    match response.next_token {
+        Some(x) => LogsResponse::Token(x),
+        None => {
+            let lastEvent = events
+                .into_iter()
+                .fold(FilteredLogEvent::default(), |acc, x| {
+                    if acc.timestamp.unwrap() < x.timestamp.unwrap() {
+                        x
+                    } else {
+                        acc
+                    }
+                });
+            LogsResponse::Time(lastEvent.timestamp.unwrap())
+        }
+    }
 }
 
 pub fn client_with_profile(name: &str, region: Region) -> CloudWatchLogsClient {
@@ -103,6 +119,10 @@ pub fn run(matches: ArgMatches) -> Result<(), String> {
         Some(m) => Region::from_str(m),
         None => Ok(Region::UsEast1),
     };
+    let refetch = match matches.value_of("fetch") {
+        Some(m) => parse_duration(m),
+        None => parse_duration("10s"),
+    };
     let client = match matches.value_of("profile") {
         Some(m) => client_with_profile(m, region.unwrap()),
         None => CloudWatchLogsClient::new(region.unwrap()),
@@ -112,8 +132,11 @@ pub fn run(matches: ArgMatches) -> Result<(), String> {
 
     loop {
         match fetch_logs(&client, req, timeout.unwrap()) {
-            Some(x) => token = Some(x),
-            None => break,
+            LogsResponse::Token(x) => token = Some(x),
+            LogsResponse::Time(x) => {
+                std::thread::sleep(refetch.unwrap());
+                token = None;
+            }
         };
         req = create_filter_request(group, mtime.unwrap(), token);
     }

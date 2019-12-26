@@ -9,6 +9,13 @@ fn main() {
         .author("Yoandy Rodriguez <yoandy.rmartinez@gmail.com>")
         .about("like tail -f for AWS Cloudwatch")
         .arg(
+            Arg::with_name("fetch")
+                .short("f")
+                .required(false)
+                .value_name("TIME")
+                .help("Keep polling for logs, default poll time is 10 seconds"),
+        )
+        .arg(
             Arg::with_name("group")
                 .short("g")
                 .required(true)
