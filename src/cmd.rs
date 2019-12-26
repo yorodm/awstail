@@ -28,6 +28,7 @@ fn create_filter_request(
     let delta = calculate_start_time(Local::now(), start);
     req.start_time = delta;
     req.next_token = token;
+    req.limit = Some(100);
     req.log_group_name = group.to_string();
     return req;
 }
@@ -108,7 +109,6 @@ pub fn run(matches: ArgMatches) -> Result<(), String> {
     };
     let mut token: Option<String> = None;
     let mut req = create_filter_request(group, mtime.unwrap(), token);
-
     loop {
         match fetch_logs(&client, req, timeout.unwrap()) {
             Some(x) => token = Some(x),
