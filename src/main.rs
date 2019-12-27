@@ -48,6 +48,6 @@ fn main() {
         )
         .get_matches();
     if let Err(_e) = run(matches) {
-        std::process::exit(1);
+        std::process::exit(0);
     }
 }
