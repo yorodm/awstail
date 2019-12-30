@@ -1,6 +1,6 @@
 [package]
 name = "awstail"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Yoandy Rodriguez <yoandy.rmartinez@gmail.com>"]
 edition = '2018'
 [dependencies]
@@ -11,3 +11,4 @@ clap = "2.32.0"
 chrono ="0.4.6"
 humantime = "1.1.1"
 console ="0.6.2"
+ctrlc = "3.1.3"
