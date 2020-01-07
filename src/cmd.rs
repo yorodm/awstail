@@ -53,9 +53,13 @@ fn create_filter_from_timestamp(
 
 fn print_date(time: Option<i64>) -> String {
     match time {
-        Some(x) => DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(x / 1000, 0), Utc)
-            .format("%Y-%m-%d %H:%M:%S")
-            .to_string(),
+        //TODO: WTF!!
+        Some(x) => DateTime::<Local>::from(DateTime::<Utc>::from_utc(
+            NaiveDateTime::from_timestamp(x / 1000, 0),
+            Utc,
+        ))
+        .format("%Y-%m-%d %H:%M:%S")
+        .to_string(),
         None => "".to_owned(),
     }
 }
