@@ -27,7 +27,8 @@ main() {
 			;;
 		*)
 			cp target/$TARGET/release/awstail $stage/
-
+			;;
+	esac
 
     cd $stage
     tar czf $src/$CRATE_NAME-$TRAVIS_TAG-$TARGET.tar.gz *
