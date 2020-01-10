@@ -7,7 +7,7 @@ fn main() {
     ctrlc::set_handler(move || std::process::exit(0))
         .expect("Could not set Ctrl+C handler...bailing out");
     let matches = App::new("awstail")
-        .version("0.2.2")
+        .version("0.3.0")
         .author("Yoandy Rodriguez <yoandy.rmartinez@gmail.com>")
         .about("like tail -f for AWS Cloudwatch")
         .arg(
