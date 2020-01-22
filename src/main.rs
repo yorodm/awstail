@@ -11,12 +11,21 @@ fn main() {
         .author("Yoandy Rodriguez <yoandy.rmartinez@gmail.com>")
         .about("like tail -f for AWS Cloudwatch")
         .arg(
+            Arg::with_name("list")
+                .short("l")
+                .required(true)
+                .takes_value(false)
+                .help("List existing log groups")
+                .conflicts_with_all(&["group", "watch", "since"]),
+        )
+        .arg(
             Arg::with_name("group")
+                .short("g")
                 .required(true)
                 .takes_value(true)
                 .value_name("LOG_GROUP")
-                .help("Log group name")
-                .index(1),
+                .conflicts_with("list")
+                .help("Log group name"),
         )
         .arg(
             Arg::with_name("region")

@@ -6,7 +6,10 @@ use humantime::parse_duration;
 use rusoto_core::HttpClient;
 use rusoto_core::Region;
 use rusoto_credential::{AutoRefreshingProvider, ChainProvider, ProfileProvider};
-use rusoto_logs::{CloudWatchLogs, CloudWatchLogsClient, FilterLogEventsRequest};
+use rusoto_logs::{
+    CloudWatchLogs, CloudWatchLogsClient, DescribeLogGroupsRequest, DescribeLogGroupsResponse,
+    FilterLogEventsRequest,
+};
 use std::result::Result;
 use std::str::FromStr;
 use std::time::Duration;
@@ -119,16 +122,31 @@ mod tests {
     }
 }
 
+// TODO: Ugly, make it better please
+pub fn list_log_groups(c: &CloudWatchLogsClient) -> Result<(), String> {
+    let mut req = DescribeLogGroupsRequest::default();
+    loop {
+        let resp = c.describe_log_groups(req).sync().unwrap();
+        match resp.log_groups {
+            Some(x) => {
+                for group in x {
+                    println!("{}", group.log_group_name.unwrap())
+                }
+            }
+            None => break,
+        }
+        match resp.next_token {
+            Some(x) => {
+                req = DescribeLogGroupsRequest::default();
+                req.next_token = Some(x)
+            }
+            None => break,
+        }
+    }
+    Ok(())
+}
+
 pub fn run(matches: ArgMatches) -> Result<(), String> {
-    let group = matches.value_of("group").unwrap();
-    let mtime = match matches.value_of("since") {
-        Some(m) => parse_duration(m),
-        None => parse_duration("5m"),
-    };
-    let timeout = match matches.value_of("timeout") {
-        Some(m) => parse_duration(m),
-        None => parse_duration("30s"),
-    };
     let region = match matches.value_of("region") {
         Some(m) => Region::from_str(m),
         None => Ok(Region::UsEast1),
@@ -137,24 +155,37 @@ pub fn run(matches: ArgMatches) -> Result<(), String> {
         Some(m) => client_with_profile(m, region.unwrap()),
         None => CloudWatchLogsClient::new(region.unwrap()),
     };
-    let sleep_for = match matches.value_of("watch") {
-        Some(m) => parse_duration(m),
-        None => parse_duration("10s"),
-    };
-    let mut token: Option<String> = None;
-    let mut req = create_filter_request(group, mtime.unwrap(), token);
-    loop {
-        match fetch_logs(&client, req, timeout.unwrap()) {
-            AWSResponse::Token(x) => {
-                token = Some(x);
-                req = create_filter_request(group, mtime.unwrap(), token);
-            }
-            AWSResponse::LastLog(t) => {
-                token = None;
-                req = create_filter_from_timestamp(group, t, token);
-                std::thread::sleep(sleep_for.unwrap());
-            }
+    if matches.is_present("list") {
+        return list_log_groups(&client);
+    } else {
+        let group = matches.value_of("group").unwrap();
+        let mtime = match matches.value_of("since") {
+            Some(m) => parse_duration(m),
+            None => parse_duration("5m"),
         };
+        let timeout = match matches.value_of("timeout") {
+            Some(m) => parse_duration(m),
+            None => parse_duration("30s"),
+        };
+        let sleep_for = match matches.value_of("watch") {
+            Some(m) => parse_duration(m),
+            None => parse_duration("10s"),
+        };
+        let mut token: Option<String> = None;
+        let mut req = create_filter_request(group, mtime.unwrap(), token);
+        loop {
+            match fetch_logs(&client, req, timeout.unwrap()) {
+                AWSResponse::Token(x) => {
+                    token = Some(x);
+                    req = create_filter_request(group, mtime.unwrap(), token);
+                }
+                AWSResponse::LastLog(t) => {
+                    token = None;
+                    req = create_filter_from_timestamp(group, t, token);
+                    std::thread::sleep(sleep_for.unwrap());
+                }
+            };
+        }
     }
     Ok(())
 }
