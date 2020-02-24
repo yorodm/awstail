@@ -8,23 +8,22 @@ in a way similar to `tail -f`.
 To install just download the binaries from the release page or clone this repo and build it yourself.
 
 ```sh
-awstail 0.3.0
+awstail 0.4.0
 Yoandy Rodriguez <yoandy.rmartinez@gmail.com>
 like tail -f for AWS Cloudwatch
 
 USAGE:
-    awstail.exe [OPTIONS] <LOG_GROUP>
+    awstail.exe [FLAGS] [OPTIONS] -g <LOG_GROUP> -l
 
 FLAGS:
     -h, --help       Prints help information
+    -l               List existing log groups
     -V, --version    Prints version information
 
 OPTIONS:
-    -p <PROFILE>        Profile if using other than 'default'
-    -r <REGION>         AWS region (defaults to us-east-1)
-    -s <SINCE>          Take logs since given time (defaults to 5 minutes)
-    -w <WATCH>          Keep watching for new logs every n seconds (defaults to 10)
-
-ARGS:
-    <LOG_GROUP>    Log group name
+    -g <LOG_GROUP>        Log group name
+    -p <PROFILE>          Profile if using other than 'default'
+    -r <REGION>           AWS region (defaults to us-east-1)
+    -s <SINCE>            Take logs since given time (defaults to 5 minutes)
+    -w <WATCH>            Keep watching for new logs every n seconds (defaults to 10)
 ```
