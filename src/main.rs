@@ -5,10 +5,22 @@ use humantime::parse_duration;
 use rusoto_core::Region;
 use rusoto_logs::CloudWatchLogsClient;
 use std::str::FromStr;
+use structopt::StructOpt;
 use util::{
     client_with_profile, create_filter_from_timestamp, create_filter_request, fetch_logs,
     list_log_groups, AWSResponse,
 };
+
+#[derive(Debug, StructOpt)]
+#[structopt(name = "awstail", about = "Like tail but for Amazon")]
+pub struct CliOptions {
+    #[structopt(short, long)]
+    list: bool,
+    #[structopt(short, long)]
+    group: String,
+    #[structopt(short, long)]
+    watch: bool,
+}
 
 fn get_options<'a>() -> ArgMatches<'a> {
     return App::new("awstail")
