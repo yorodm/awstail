@@ -1,13 +1,22 @@
 [package]
 name = "awstail"
-version = "0.2.0"
+version = "0.4.0"
 authors = ["Yoandy Rodriguez <yoandy.rmartinez@gmail.com>"]
 edition = '2018'
+homepage = "https://github.com/yorodm/awstail"
+repository = "https://github.com/yorodm/awstail"
+description = "Like `tail -f` for AWS Logs"
+readme = "README.md"
+categories = ["command-line-utilities"]
+license-file="LICENSE.md"
+[badges]
+travis-ci = { repository = "yorodm/awstail", branch = "master" }
 [dependencies]
-rusoto_core = "0.34.0"
-rusoto_logs ="0.34.0"
-rusoto_credential ="0.13.0"
+rusoto_core = {version = "0.42.0", default_features = false, features=["rustls"]}
+rusoto_logs = {version = "0.42.0", default_features = false, features=["rustls"]}
+rusoto_credential ="0.42.0"
 clap = "2.32.0"
+structopt = "0.3"
 chrono ="0.4.6"
 humantime = "1.1.1"
 console ="0.6.2"
