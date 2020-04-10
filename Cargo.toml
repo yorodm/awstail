@@ -1,6 +1,6 @@
 [package]
 name = "awstail"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["Yoandy Rodriguez <yoandy.rmartinez@gmail.com>"]
 edition = '2018'
 homepage = "https://github.com/yorodm/awstail"
