@@ -8,7 +8,7 @@ in a way similar to `tail -f`.
 To install just download the binaries from the release page or clone this repo and build it yourself.
 
 ```sh
-awstail 0.5.0
+awstail 0.5.1
 Like tail but for Amazon
 
 USAGE:
