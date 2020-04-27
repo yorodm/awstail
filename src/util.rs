@@ -23,8 +23,9 @@ fn calculate_start_time(from: DateTime<Local>, delta: Duration) -> Option<i64> {
 }
 
 pub fn create_filter_request(
-    group: &str,
+    group: &String,
     start: Duration,
+    filter: Option<String>,
     token: Option<String>,
 ) -> FilterLogEventsRequest {
     let mut req = FilterLogEventsRequest::default();
@@ -32,19 +33,22 @@ pub fn create_filter_request(
     req.start_time = delta;
     req.next_token = token;
     req.limit = Some(100);
+    req.filter_pattern = filter;
     req.log_group_name = group.to_string();
     return req;
 }
 
 pub fn create_filter_from_timestamp(
-    group: &str,
+    group: &String,
     start: Option<i64>,
+    filter: Option<String>,
     token: Option<String>,
 ) -> FilterLogEventsRequest {
     let mut req = FilterLogEventsRequest::default();
     req.start_time = start;
     req.next_token = token;
     req.limit = Some(100);
+    req.filter_pattern = filter;
     req.log_group_name = group.to_string();
     return req;
 }

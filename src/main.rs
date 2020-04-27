@@ -1,9 +1,7 @@
-use clap::{App, Arg, ArgMatches};
 use ctrlc;
 mod util;
 use humantime::parse_duration;
 use rusoto_core::Region;
-use rusoto_logs::CloudWatchLogsClient;
 use std::str::FromStr;
 use structopt::StructOpt;
 use util::{
@@ -14,106 +12,49 @@ use util::{
 #[derive(Debug, StructOpt)]
 #[structopt(name = "awstail", about = "Like tail but for Amazon")]
 pub struct CliOptions {
-    #[structopt(short, long)]
+    #[structopt(short, long,conflicts_with_all(&["group", "watch", "since", "filter"]))]
     list: bool,
     #[structopt(short, long)]
-    group: String,
+    group: Option<String>,
+    #[structopt(short, long, default_value = "30s")]
+    watch: String,
+    #[structopt(short, long, default_value = "5min")]
+    since: String,
     #[structopt(short, long)]
-    watch: bool,
-}
-
-fn get_options<'a>() -> ArgMatches<'a> {
-    return App::new("awstail")
-        .version("0.4.0")
-        .author("Yoandy Rodriguez <yoandy.rmartinez@gmail.com>")
-        .about("like tail -f for AWS Cloudwatch")
-        .arg(
-            Arg::with_name("list")
-                .short("l")
-                .required(true)
-                .takes_value(false)
-                .help("List existing log groups")
-                .conflicts_with_all(&["group", "watch", "since"]),
-        )
-        .arg(
-            Arg::with_name("group")
-                .short("g")
-                .required(true)
-                .takes_value(true)
-                .value_name("LOG_GROUP")
-                .conflicts_with("list")
-                .help("Log group name"),
-        )
-        .arg(
-            Arg::with_name("region")
-                .short("r")
-                .required(false)
-                .value_name("REGION")
-                .help("AWS region (defaults to us-east-1)"),
-        )
-        .arg(
-            Arg::with_name("profile")
-                .short("p")
-                .required(false)
-                .value_name("PROFILE")
-                .help("Profile if using other than 'default'"),
-        )
-        .arg(
-            Arg::with_name("since")
-                .short("s")
-                .required(false)
-                .value_name("SINCE")
-                .help("Take logs since given time (defaults to 5 minutes)"),
-        )
-        .arg(
-            Arg::with_name("watch")
-                .short("w")
-                .required(false)
-                .value_name("WATCH")
-                .help("Keep watching for new logs every n seconds (defaults to 10)"),
-        )
-        .get_matches();
+    filter: Option<String>,
+    #[structopt(short, long, default_value = "us-east-1")]
+    region: String,
+    #[structopt(short, long, default_value = "default")]
+    profile: String,
+    #[structopt(short, long, default_value = "30s")]
+    timeout: String,
 }
 
 fn main() {
     ctrlc::set_handler(move || std::process::exit(0))
         .expect("Could not set Ctrl+C handler...bailing out");
-    let matches = get_options();
-    let region = match matches.value_of("region") {
-        Some(m) => Region::from_str(m),
-        None => Ok(Region::UsEast1),
-    };
-    let client = match matches.value_of("profile") {
-        Some(m) => client_with_profile(m, region.unwrap()),
-        None => CloudWatchLogsClient::new(region.unwrap()),
-    };
-    if matches.is_present("list") {
+    let matches = CliOptions::from_args();
+    let region = Region::from_str(&matches.region).unwrap();
+    let client = client_with_profile(&matches.profile, region);
+    if matches.list {
         list_log_groups(&client).unwrap();
     } else {
-        let group = matches.value_of("group").unwrap();
-        let mtime = match matches.value_of("since") {
-            Some(m) => parse_duration(m),
-            None => parse_duration("5m"),
-        };
-        let timeout = match matches.value_of("timeout") {
-            Some(m) => parse_duration(m),
-            None => parse_duration("30s"),
-        };
-        let sleep_for = match matches.value_of("watch") {
-            Some(m) => parse_duration(m),
-            None => parse_duration("10s"),
-        };
+        let group = matches.group.unwrap();
+        let mtime = parse_duration(&matches.since);
+        let timeout = parse_duration(&matches.timeout);
+        let sleep_for = parse_duration(&matches.watch);
+        let filter = matches.filter;
         let mut token: Option<String> = None;
-        let mut req = create_filter_request(group, mtime.unwrap(), token);
+        let mut req = create_filter_request(&group, mtime.unwrap(), filter.clone(), token);
         loop {
             match fetch_logs(&client, req, timeout.unwrap()) {
                 AWSResponse::Token(x) => {
                     token = Some(x);
-                    req = create_filter_request(group, mtime.unwrap(), token);
+                    req = create_filter_request(&group, mtime.unwrap(), filter.clone(), token);
                 }
                 AWSResponse::LastLog(t) => {
                     token = None;
-                    req = create_filter_from_timestamp(group, t, token);
+                    req = create_filter_from_timestamp(&group, t, filter.clone(), token);
                     std::thread::sleep(sleep_for.unwrap());
                 }
             };
