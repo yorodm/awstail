@@ -1,6 +1,7 @@
 use chrono::Duration as Delta;
 use chrono::{DateTime, Local, NaiveDateTime, Utc};
 use console::Style;
+use log::info;
 use rusoto_core::{HttpClient, Region};
 use rusoto_credential::{AutoRefreshingProvider, ChainProvider, ProfileProvider};
 use rusoto_logs::{
@@ -125,6 +126,7 @@ mod tests {
 pub fn list_log_groups(c: &CloudWatchLogsClient) -> Result<(), String> {
     let mut req = DescribeLogGroupsRequest::default();
     loop {
+        info!("Sending list log groups request...");
         let resp = c.describe_log_groups(req).sync().unwrap();
         match resp.log_groups {
             Some(x) => {

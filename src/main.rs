@@ -16,8 +16,8 @@ pub struct CliOptions {
     list: bool,
     #[structopt(short, long)]
     group: Option<String>,
-    #[structopt(short, long, default_value = "30s")]
-    watch: String,
+    #[structopt(short, long)]
+    watch: Option<String>,
     #[structopt(short, long, default_value = "5min")]
     since: String,
     #[structopt(short, long)]
@@ -28,6 +28,9 @@ pub struct CliOptions {
     profile: String,
     #[structopt(short, long, default_value = "30s")]
     timeout: String,
+    /// Verbose mode (-v, -vv, -vvv, etc)
+    #[structopt(short = "v", long = "verbose", parse(from_occurrences))]
+    verbose: usize,
 }
 
 fn main() {
@@ -36,13 +39,18 @@ fn main() {
     let matches = CliOptions::from_args();
     let region = Region::from_str(&matches.region).unwrap();
     let client = client_with_profile(&matches.profile, region);
+    stderrlog::new()
+        .module(module_path!())
+        .verbosity(matches.verbose)
+        .init()
+        .unwrap();
     if matches.list {
         list_log_groups(&client).unwrap();
     } else {
         let group = matches.group.unwrap();
         let mtime = parse_duration(&matches.since);
         let timeout = parse_duration(&matches.timeout);
-        let sleep_for = parse_duration(&matches.watch);
+        let sleep_for = matches.watch.map(|x| parse_duration(&x));
         let filter = matches.filter;
         let mut token: Option<String> = None;
         let mut req = create_filter_request(&group, mtime.unwrap(), filter.clone(), token);
@@ -52,11 +60,14 @@ fn main() {
                     token = Some(x);
                     req = create_filter_request(&group, mtime.unwrap(), filter.clone(), token);
                 }
-                AWSResponse::LastLog(t) => {
-                    token = None;
-                    req = create_filter_from_timestamp(&group, t, filter.clone(), token);
-                    std::thread::sleep(sleep_for.unwrap());
-                }
+                AWSResponse::LastLog(t) => match sleep_for {
+                    Some(x) => {
+                        token = None;
+                        req = create_filter_from_timestamp(&group, t, filter.clone(), token);
+                        std::thread::sleep(x.unwrap());
+                    }
+                    None => break,
+                },
             };
         }
     }
