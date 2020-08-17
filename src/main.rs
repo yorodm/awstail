@@ -1,6 +1,7 @@
 use ctrlc;
 mod util;
 use humantime::parse_duration;
+use log::info;
 use rusoto_core::Region;
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -64,6 +65,7 @@ fn main() {
                     Some(x) => {
                         token = None;
                         req = create_filter_from_timestamp(&group, t, filter.clone(), token);
+                        info!("Waiting {:?} before requesting logs again...", x.unwrap());
                         std::thread::sleep(x.unwrap());
                     }
                     None => break,

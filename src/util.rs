@@ -77,9 +77,10 @@ pub fn fetch_logs(
         .with_timeout(timeout)
         .sync()
         .unwrap();
-    let events = response.events.unwrap();
+    let mut events = response.events.unwrap();
     let green = Style::new().green();
     let mut last: Option<i64> = None;
+    events.sort_by_key(|x| x.timestamp.or(Some(-1)).unwrap());
     for event in events {
         println!(
             "{} {}",
