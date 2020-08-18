@@ -5,8 +5,10 @@ use log::info;
 use rusoto_core::{HttpClient, Region};
 use rusoto_credential::{AutoRefreshingProvider, ChainProvider, ProfileProvider};
 use rusoto_logs::{
-    CloudWatchLogs, CloudWatchLogsClient, DescribeLogGroupsRequest, FilterLogEventsRequest,
+    CloudWatchLogs, CloudWatchLogsClient, DescribeLogGroupsRequest,
+    FilterLogEventsRequest,
 };
+use std::convert::From;
 use std::result::Result;
 use std::time::Duration;
 
@@ -67,34 +69,34 @@ fn print_date(time: Option<i64>) -> String {
     }
 }
 
-pub fn fetch_logs(
+pub async fn fetch_logs(
     client: &CloudWatchLogsClient,
     req: FilterLogEventsRequest,
     timeout: Duration,
-) -> AWSResponse {
-    let response = client
-        .filter_log_events(req.clone()) // we may need this later
-        .with_timeout(timeout)
-        .sync()
-        .unwrap();
-    let mut events = response.events.unwrap();
-    let green = Style::new().green();
-    let mut last: Option<i64> = None;
-    events.sort_by_key(|x| x.timestamp.or(Some(-1)).unwrap());
-    for event in events {
-        println!(
-            "{} {}",
-            green.apply_to(print_date(event.timestamp)),
-            event.message.unwrap().trim(),
-        );
-        last = event.timestamp
-    }
-    match response.next_token {
-        Some(x) => AWSResponse::Token(x),
-        None => match last {
-            Some(t) => AWSResponse::LastLog(Some(t)),
-            None => AWSResponse::LastLog(req.start_time),
-        },
+) -> Result<AWSResponse, anyhow::Error> {
+    match tokio::time::timeout(timeout, client.filter_log_events(req.clone())).await? {
+        Ok(response) => {
+            let mut events = response.events.unwrap();
+            let green = Style::new().green();
+            let mut last: Option<i64> = None;
+            events.sort_by_key(|x| x.timestamp.or(Some(-1)).unwrap());
+            for event in events {
+                println!(
+                    "{} {}",
+                    green.apply_to(print_date(event.timestamp)),
+                    event.message.unwrap().trim(),
+                );
+                last = event.timestamp
+            }
+            match response.next_token {
+                Some(x) => Ok(AWSResponse::Token(x)),
+                None => match last {
+                    Some(t) => Ok(AWSResponse::LastLog(Some(t))),
+                    None => Ok(AWSResponse::LastLog(req.start_time)),
+                },
+            }
+        }
+        _ => return Err(anyhow::anyhow!("Failed to retrieve logs")),
     }
 }
 
@@ -124,11 +126,11 @@ mod tests {
 }
 
 // TODO: Ugly, make it better please
-pub fn list_log_groups(c: &CloudWatchLogsClient) -> Result<(), String> {
+pub async fn list_log_groups(c: &CloudWatchLogsClient) -> Result<(), anyhow::Error> {
     let mut req = DescribeLogGroupsRequest::default();
     loop {
         info!("Sending list log groups request...");
-        let resp = c.describe_log_groups(req).sync().unwrap();
+        let resp = c.describe_log_groups(req).await?;
         match resp.log_groups {
             Some(x) => {
                 for group in x {
