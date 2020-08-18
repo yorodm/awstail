@@ -8,23 +8,18 @@ in a way similar to `tail -f`.
 To install just download the binaries from the release page or clone this repo and build it yourself.
 
 ```sh
-awstail 0.5.1
-Like tail but for Amazon
+Usage: target\debug\awstail.exe [OPTIONS]
 
-USAGE:
-awstail.exe [FLAGS] [OPTIONS]
+awstail: Tail log streams from AWS Cloudwatch logs
 
-FLAGS:
--h, --help Prints help information
--l, --list
--V, --versionPrints version information
 
-OPTIONS:
--f, --filter <filter>
--g, --group <group>
--p, --profile <profile> [default: default]
--r, --region <region> [default: us-east-1]
--s, --since <since> [default: 5min]
--t, --timeout <timeout> [default: 30s]
--w, --watch <watch> [default: 30s]
+Optional arguments:
+  -h, --help             show this message
+  -v, --verbose VERBOSE  be verbose
+  -r, --region REGION    region
+  -p, --profile PROFILE  profile
+
+Available commands:
+  list  List existing groups
+  logs  Fetch logs from groups
 ```
