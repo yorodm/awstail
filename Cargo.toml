@@ -9,8 +9,6 @@ description = "Like `tail -f` for AWS Logs"
 readme = "README.md"
 categories = ["command-line-utilities"]
 license-file="LICENSE.md"
-[badges]
-travis-ci = { repository = "yorodm/awstail", branch = "master" }
 [dependencies]
 rusoto_core = {version = "0.45.0", default_features = false, features=["rustls"]}
 rusoto_logs = {version = "0.45.0", default_features = false, features=["rustls"]}
