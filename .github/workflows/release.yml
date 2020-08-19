@@ -20,11 +20,11 @@ jobs:
           - name: linux
             os: ubuntu-latest
             artifact_name: awstail
-            asset_name: awstail-linux
+            asset_name: awstail
           - name: windows
             os: windows-latest
             artifact_name: awstail.exe
-            asset_name: awstail-windows
+            asset_name: awstail.exe
 
     steps:
     - uses: actions/checkout@v1
