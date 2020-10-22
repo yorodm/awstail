@@ -5,8 +5,7 @@ use log::info;
 use rusoto_core::{HttpClient, Region};
 use rusoto_credential::{AutoRefreshingProvider, ChainProvider, ProfileProvider};
 use rusoto_logs::{
-    CloudWatchLogs, CloudWatchLogsClient, DescribeLogGroupsRequest,
-    FilterLogEventsRequest,
+    CloudWatchLogs, CloudWatchLogsClient, DescribeLogGroupsRequest, FilterLogEventsRequest,
 };
 use std::convert::From;
 use std::result::Result;
@@ -78,19 +77,19 @@ pub async fn fetch_logs(
         Ok(response) => {
             let mut events = response.events.unwrap();
             let green = Style::new().green();
-            let mut last: Option<i64> = None;
-            events.sort_by_key(|x| x.timestamp.or(Some(-1)).unwrap());
-            for event in events {
+            events.sort_by_key(|x| x.timestamp.map_or(-1, |x| x));
+            for event in &events {
+                let message = event.message.as_ref().map_or("".into(), |x| x.clone());
                 println!(
                     "{} {}",
                     green.apply_to(print_date(event.timestamp)),
-                    event.message.unwrap().trim(),
+                    message,
                 );
-                last = event.timestamp
             }
+            let last = events.last().map(|x| x.timestamp);
             match response.next_token {
                 Some(x) => Ok(AWSResponse::Token(x)),
-                None => match last {
+                None => match last.flatten() {
                     Some(t) => Ok(AWSResponse::LastLog(Some(t))),
                     None => Ok(AWSResponse::LastLog(req.start_time)),
                 },
