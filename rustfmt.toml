@@ -2,3 +2,4 @@ edition ="2018"
 tab_paces = 4
 hard_tabs = false
 reorder_imports = true
+newline_style = "Unix"

@@ -1,7 +1,7 @@
 use chrono::Duration as Delta;
 use chrono::{DateTime, Local, NaiveDateTime, Utc};
 use console::Style;
-use log::info;
+use log::{info};
 use rusoto_core::{HttpClient, Region};
 use rusoto_credential::{AutoRefreshingProvider, ChainProvider, ProfileProvider};
 use rusoto_logs::{
@@ -73,8 +73,10 @@ pub async fn fetch_logs(
     req: FilterLogEventsRequest,
     timeout: Duration,
 ) -> Result<AWSResponse, anyhow::Error> {
+	info!("Sending log request {:?}",&req);
     match tokio::time::timeout(timeout, client.filter_log_events(req.clone())).await? {
         Ok(response) => {
+            info!("Got response {:?}", &response);
             let mut events = response.events.unwrap();
             let green = Style::new().green();
             events.sort_by_key(|x| x.timestamp.map_or(-1, |x| x));
@@ -95,7 +97,7 @@ pub async fn fetch_logs(
                 },
             }
         }
-        _ => return Err(anyhow::anyhow!("Failed to retrieve logs")),
+        Err(_) => return Err(anyhow::anyhow!("Failed to retrieve logs")),
     }
 }
 
@@ -128,7 +130,7 @@ mod tests {
 pub async fn list_log_groups(c: &CloudWatchLogsClient) -> Result<(), anyhow::Error> {
     let mut req = DescribeLogGroupsRequest::default();
     loop {
-        info!("Sending list log groups request...");
+        info!("Sending list log groups request {:?}", &req);
         let resp = c.describe_log_groups(req).await?;
         match resp.log_groups {
             Some(x) => {
