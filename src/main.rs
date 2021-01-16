@@ -33,7 +33,12 @@ pub enum CommandOptions {
     List(ListOpts),
     #[options(help = "access existing logs from a group")]
     Logs(LogsOptions),
+	#[options(help = "Show program version")]
+	Version(Version),
 }
+
+#[derive(Debug, Options, PartialEq)]
+pub struct Version{}
 
 #[derive(Debug, Options, PartialEq)]
 /// List existing log groups
@@ -111,6 +116,9 @@ async fn main() -> Result<(), anyhow::Error> {
                     };
                 }
             }
+            CommandOptions::Version(_) => {
+				println!("awstail {}", env!("CARGO_PKG_VERSION"));
+			}
         }
     };
     Ok(())
