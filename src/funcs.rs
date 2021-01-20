@@ -1,7 +1,7 @@
 use chrono::Duration as Delta;
 use chrono::{DateTime, Local, NaiveDateTime, Utc};
 use console::Style;
-use log::{info};
+use log::info;
 use rusoto_core::{HttpClient, Region};
 use rusoto_credential::{AutoRefreshingProvider, ChainProvider, ProfileProvider};
 use rusoto_logs::{
@@ -73,7 +73,7 @@ pub async fn fetch_logs(
     req: FilterLogEventsRequest,
     timeout: Duration,
 ) -> Result<AWSResponse, anyhow::Error> {
-	info!("Sending log request {:?}",&req);
+    info!("Sending log request {:?}", &req);
     match tokio::time::timeout(timeout, client.filter_log_events(req.clone())).await? {
         Ok(response) => {
             info!("Got response {:?}", &response);
@@ -97,7 +97,7 @@ pub async fn fetch_logs(
                 },
             }
         }
-        Err(_) => return Err(anyhow::anyhow!("Failed to retrieve logs")),
+        Err(x) => return Err(anyhow::anyhow!(x)),
     }
 }
 
@@ -109,24 +109,6 @@ pub fn client_with_profile(name: &str, region: Region) -> CloudWatchLogsClient {
     CloudWatchLogsClient::new_with(HttpClient::new().unwrap(), credentials, region)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use chrono::{Duration, Local};
-    use humantime::parse_duration;
-
-    #[test]
-    fn test_calculate_start_time() {
-        let local = Local::now();
-        let duration = parse_duration("1d").unwrap();
-        assert_eq!(
-            calculate_start_time(local, duration).unwrap(),
-            (local - Duration::days(1)).timestamp_millis()
-        )
-    }
-}
-
-// TODO: Ugly, make it better please
 pub async fn list_log_groups(c: &CloudWatchLogsClient) -> Result<(), anyhow::Error> {
     let mut req = DescribeLogGroupsRequest::default();
     loop {
@@ -149,4 +131,21 @@ pub async fn list_log_groups(c: &CloudWatchLogsClient) -> Result<(), anyhow::Err
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::{Duration, Local};
+    use humantime::parse_duration;
+
+    #[test]
+    fn test_calculate_start_time() {
+        let local = Local::now();
+        let duration = parse_duration("1d").unwrap();
+        assert_eq!(
+            calculate_start_time(local, duration).unwrap(),
+            (local - Duration::days(1)).timestamp_millis()
+        )
+    }
 }

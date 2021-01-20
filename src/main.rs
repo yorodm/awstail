@@ -10,7 +10,6 @@ use log::info;
 use rusoto_core::Region;
 use std::str::FromStr;
 
-
 #[derive(Debug, Options, PartialEq)]
 /// Tail the cloud
 pub struct CliOptions {
@@ -33,12 +32,12 @@ pub enum CommandOptions {
     List(ListOpts),
     #[options(help = "access existing logs from a group")]
     Logs(LogsOptions),
-	#[options(help = "Show program version")]
-	Version(Version),
+    #[options(help = "Show program version")]
+    Version(Version),
 }
 
 #[derive(Debug, Options, PartialEq)]
-pub struct Version{}
+pub struct Version {}
 
 #[derive(Debug, Options, PartialEq)]
 /// List existing log groups
@@ -74,10 +73,10 @@ async fn main() -> Result<(), anyhow::Error> {
     ctrlc::set_handler(move || std::process::exit(0))
         .expect("Could not set Ctrl+C handler...bailing out");
     let matches: CliOptions = CliOptions::parse_args_default_or_exit();
-    let region = matches
-        .region
-        .map_or(Region::default(), |x| Region::from_str(&x).unwrap());
-	env_logger::init();
+    let region = matches.region.map_or(Region::default(), |x| {
+        Region::from_str(&x).expect("Invalid region name")
+    });
+    env_logger::init();
     let profile = matches.profile.map_or("default".to_owned(), |x| x);
     let client = client_with_profile(&profile, region);
     if let Some(commands) = matches.commands {
@@ -98,18 +97,18 @@ async fn main() -> Result<(), anyhow::Error> {
                 loop {
                     match fetch_logs(&client, req, timeout).await? {
                         AWSResponse::Token(x) => {
-							info!("Got a Token response");
+                            info!("Got a Token response");
                             token = Some(x);
                             req = create_filter_request(&group, mtime, filter.clone(), token);
                         }
                         AWSResponse::LastLog(t) => match sleep_for {
                             Some(x) => {
-								info!("Got a lastlog response");
+                                info!("Got a lastlog response");
                                 token = None;
                                 req =
                                     create_filter_from_timestamp(&group, t, filter.clone(), token);
                                 info!("Waiting {:?} before requesting logs again...", x);
-								tokio::time::delay_for(x).await
+                                tokio::time::delay_for(x).await
                             }
                             None => break,
                         },
@@ -117,25 +116,9 @@ async fn main() -> Result<(), anyhow::Error> {
                 }
             }
             CommandOptions::Version(_) => {
-				println!("awstail {}", env!("CARGO_PKG_VERSION"));
-			}
+                println!("awstail {}", env!("CARGO_PKG_VERSION"));
+            }
         }
     };
     Ok(())
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_logs_command() {
-        let _ = CliOptions::parse_args_default(&vec![
-            "logs",
-            "-g /aws/lambda/Pepe",
-            "-f \"Pattern\"",
-            "-w 30s",
-        ])
-        .unwrap();
-    }
 }
